@@ -23,6 +23,17 @@ API_URL = 'https://api.api-ninjas.com/v1/exercises'
 db.init_db()
 
 
+# ─── Ghost-session guard ──────────────────────────────────────────────────────
+
+@app.before_request
+def validate_session_user():
+    """Clear the session if the logged-in user no longer exists in the DB."""
+    user_id = session.get('user_id')
+    if user_id and db.get_user_by_id(user_id) is None:
+        session.clear()
+        flash('Your account no longer exists. Please register or log in again.', 'warning')
+        return redirect(url_for('login'))
+
 # ─── Auth decorators ─────────────────────────────────────────────────────────
 
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', '')
@@ -45,7 +56,7 @@ def admin_required(f):
             flash('Please log in.', 'warning')
             return redirect(url_for('login'))
         user = db.get_user_by_id(session['user_id'])
-        if not ADMIN_EMAIL or user['email'] != ADMIN_EMAIL:
+        if not user or not ADMIN_EMAIL or user['email'] != ADMIN_EMAIL:
             flash('Access denied. Admins only.', 'error')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
