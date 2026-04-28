@@ -133,6 +133,11 @@ def static_from_root():
     return send_from_directory(app.static_folder, request.path[1:])
 
 
+@app.route('/google9f453f9a2cf3553a.html')
+def google_verify():
+    return send_from_directory(app.static_folder, 'google9f453f9a2cf3553a.html')
+
+
 @app.route('/sitemap.xml')
 def sitemap():
     """Generating a simple dynamic sitemap."""
