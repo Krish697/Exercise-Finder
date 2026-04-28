@@ -145,6 +145,17 @@ def add_history(user_id, activity, duration, calories, sets=0, reps=0):
     conn.close()
 
 
+def delete_history_item(user_id, item_id):
+    """Delete a history entry only if it belongs to the given user."""
+    conn = get_db()
+    conn.execute(
+        'DELETE FROM history WHERE id=? AND user_id=?',
+        (item_id, user_id)
+    )
+    conn.commit()
+    conn.close()
+
+
 def get_history(user_id, query=None):
     conn = get_db()
     if query:
@@ -208,6 +219,17 @@ def add_goal(user_id, category, target_value, target_date):
     conn.execute(
         'INSERT INTO goals (user_id, category, target_value, target_date) VALUES (?, ?, ?, ?)',
         (user_id, category, target_value, target_date)
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_goal(user_id, goal_id):
+    """Delete a goal only if it belongs to the given user."""
+    conn = get_db()
+    conn.execute(
+        'DELETE FROM goals WHERE id=? AND user_id=?',
+        (goal_id, user_id)
     )
     conn.commit()
     conn.close()

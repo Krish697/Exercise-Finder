@@ -47,7 +47,13 @@
   <div class="card goal-card" id="goal-card-{{ loop.index }}">
     <div class="goal-header">
       <span class="goal-cat-badge">{{ item.goal['category'] }}</span>
-      <span class="goal-set-date">Set: {{ item.goal['set_at'][:10] }}</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="goal-set-date">Set: {{ item.goal['set_at'][:10] }}</span>
+        <form method="POST" action="{{ url_for('delete_goal', goal_id=item.goal['id']) }}"
+              onsubmit="return confirm('Delete this goal?')" style="margin:0;">
+          <button type="submit" class="btn-icon-delete" title="Delete goal">🗑️</button>
+        </form>
+      </div>
     </div>
     <div class="goal-target">
       Target: <strong>{{ item.goal['target_value'] }}

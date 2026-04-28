@@ -60,7 +60,19 @@
         </select>
       </div>
     </div>
-    <button type="submit" class="btn btn-primary" id="search-submit-btn">Search Exercises</button>
+    <div class="form-row" style="align-items:flex-end; gap:1rem;">
+      <div class="form-group" style="min-width:160px;">
+        <label for="limit">Show Results</label>
+        <select id="limit" name="limit">
+          <option value="5"  {% if limit == 5  %}selected{% endif %}>5</option>
+          <option value="10" {% if limit == 10 %}selected{% endif %}>10</option>
+          <option value="15" {% if limit == 15 %}selected{% endif %}>15</option>
+          <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
+          <option value="30" {% if limit == 30 %}selected{% endif %}>30 (max)</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" id="search-submit-btn">Search Exercises</button>
+    </div>
   </form>
 </div>
 

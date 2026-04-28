@@ -14,6 +14,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev_secret_key')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
 API_KEY = os.getenv('API_NINJAS_KEY', '')
 API_URL = 'https://api.api-ninjas.com/v1/exercises'
@@ -22,7 +23,9 @@ API_URL = 'https://api.api-ninjas.com/v1/exercises'
 db.init_db()
 
 
-# ─── Auth decorator ──────────────────────────────────────────────────────────
+# ─── Auth decorators ─────────────────────────────────────────────────────────
+
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', '')
 
 def login_required(f):
     @wraps(f)
@@ -30,6 +33,21 @@ def login_required(f):
         if 'user_id' not in session:
             flash('Please log in to access this page.', 'warning')
             return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_required(f):
+    """Decorator: only allows the admin (set via ADMIN_EMAIL env var)."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in.', 'warning')
+            return redirect(url_for('login'))
+        user = db.get_user_by_id(session['user_id'])
+        if not ADMIN_EMAIL or user['email'] != ADMIN_EMAIL:
+            flash('Access denied. Admins only.', 'error')
+            return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated
 
@@ -172,9 +190,11 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
+        remember = request.form.get('remember_me') == 'on'
 
         user = db.get_user_by_email(email)
         if user and check_password_hash(user['password_hash'], password):
+            session.permanent = remember
             session['user_id'] = user['id']
             session['username'] = user['username']
             flash(f'Welcome back, {user["username"]}!', 'success')
@@ -315,18 +335,26 @@ def search():
     exercises = []
     error = None
     muscle = ex_type = difficulty = ''
+    limit = 10
     fav_names = {f['exercise_name'] for f in db.get_favourites(session['user_id'])}
 
     if request.method == 'POST':
         muscle = request.form.get('muscle', '').strip()
         ex_type = request.form.get('type', '')
         difficulty = request.form.get('difficulty', '')
-        exercises, error = get_exercises_from_api(muscle, ex_type, difficulty)
+        try:
+            limit = int(request.form.get('limit', 10))
+            if limit not in (5, 10, 15, 20, 30):
+                limit = 10
+        except ValueError:
+            limit = 10
+        all_exercises, error = get_exercises_from_api(muscle, ex_type, difficulty)
+        exercises = all_exercises[:limit]
 
     return render_template('search.html',
                            exercises=exercises, error=error,
                            muscle=muscle, ex_type=ex_type,
-                           difficulty=difficulty, fav_names=fav_names)
+                           difficulty=difficulty, fav_names=fav_names, limit=limit)
 
 
 # ─── Add Workout (U6 / 4.6) ──────────────────────────────────────────────────
@@ -338,15 +366,16 @@ def add_workout():
         activity = request.form.get('activity', '').strip()
         try:
             duration = int(request.form.get('duration', 0))
-            calories = int(request.form.get('calories', 0))
-            sets = int(request.form.get('sets', 0))
-            reps = int(request.form.get('reps', 0))
+            cal_raw = request.form.get('calories', '').strip()
+            calories = int(cal_raw) if cal_raw else 0
+            sets = int(request.form.get('sets', 0) or 0)
+            reps = int(request.form.get('reps', 0) or 0)
         except ValueError:
-            flash('Duration, calories, sets, and reps must be whole numbers.', 'error')
+            flash('Duration, sets, and reps must be whole numbers.', 'error')
             return render_template('add_workout.html')
 
-        if not activity or duration <= 0 or calories <= 0:
-            flash('Please fill all required fields correctly.', 'error')
+        if not activity or duration <= 0:
+            flash('Activity name and duration are required.', 'error')
             return render_template('add_workout.html')
 
         db.add_history(session['user_id'], activity, duration, calories, sets, reps)
@@ -364,6 +393,15 @@ def timeline():
     query = request.args.get('q', '')
     history = db.get_history(session['user_id'], query if query else None)
     return render_template('timeline.html', history=history, query=query)
+
+
+@app.route('/timeline/delete/<int:item_id>', methods=['POST'])
+@login_required
+def delete_history_item(item_id):
+    """Delete a specific workout history entry (only the owner can delete)."""
+    db.delete_history_item(session['user_id'], item_id)
+    flash('Workout entry deleted.', 'info')
+    return redirect(url_for('timeline'))
 
 
 # ─── Progress Report + Weight Graph (U8, U9 / 4.8, 4.9) ─────────────────────
@@ -452,6 +490,15 @@ def goals():
                            hours_left=hours_left)
 
 
+@app.route('/goals/delete/<int:goal_id>', methods=['POST'])
+@login_required
+def delete_goal(goal_id):
+    """Delete a specific goal (only the owner can delete)."""
+    db.delete_goal(session['user_id'], goal_id)
+    flash('Goal deleted.', 'info')
+    return redirect(url_for('goals'))
+
+
 # ─── Favourites (U13 / 4.13) ─────────────────────────────────────────────────
 
 @app.route('/favourites')
@@ -487,6 +534,7 @@ def remove_favourite():
 # ─── Admin DB Viewer ────────────────────────────────────────────────────────
 
 @app.route('/admin/db')
+@admin_required
 def view_database():
     """A developer tool to inspect live database contents."""
     conn = db.get_db()
@@ -504,6 +552,7 @@ def view_database():
 
 
 @app.route('/admin/user/<int:user_id>')
+@admin_required
 def admin_view_user(user_id):
     """View complete details for a specific user."""
     user = db.get_user_by_id(user_id)
@@ -520,6 +569,7 @@ def admin_view_user(user_id):
 
 
 @app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
+@admin_required
 def admin_delete_user(user_id):
     """Delete a user permanently from the system."""
     db.delete_user(user_id)
