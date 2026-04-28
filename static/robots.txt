@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /logout
+Disallow: /register
+Disallow: /login
+
+Sitemap: https://exercise-finder.vercel.app/sitemap.xml

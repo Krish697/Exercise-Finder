@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Exercise Finder{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Discover workouts, track your health, and achieve your fitness goals with Exercise Finder.{% endblock %}" />
+  
+  <!-- SEO & Social Media -->
+  <meta property="og:title" content="{% block og_title %}Exercise Finder - Your Personal Fitness Companion{% endblock %}" />
+  <meta property="og:description" content="{% block og_description %}Discover workouts, track your health, and achieve your fitness goals.{% endblock %}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="{{ request.url }}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Exercise Finder" />
+  <meta name="twitter:description" content="Discover workouts and track your health." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />

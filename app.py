@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import (Flask, render_template, request, redirect,
-                   url_for, session, flash, jsonify)
+                   url_for, session, flash, jsonify, send_from_directory)
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -97,6 +97,26 @@ def index():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
     return render_template('index.html')
+
+
+@app.route('/robots.txt')
+def static_from_root():
+    return send_from_directory(app.static_folder, request.path[1:])
+
+
+@app.route('/sitemap.xml')
+def sitemap():
+    """Generating a simple dynamic sitemap."""
+    pages = []
+    # Public pages
+    for rule in app.url_map.iter_rules():
+        if "GET" in rule.methods and len(rule.arguments) == 0:
+            pages.append(rule.rule)
+    
+    # You can add a full domain here if you know it, 
+    # but search engines often handle relative paths or the provided sitemap location.
+    sitemap_xml = render_template('sitemap.xml', pages=pages, now=datetime.now().strftime('%Y-%m-%d'))
+    return sitemap_xml, {'Content-Type': 'application/xml'}
 
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
