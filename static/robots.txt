@@ -2,7 +2,13 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /logout
-Disallow: /register
-Disallow: /login
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /search
+Disallow: /timeline
+Disallow: /progress
+Disallow: /goals
+Disallow: /favourites
+Disallow: /calculator
 
-Sitemap: https://exercise-finder.vercel.app/sitemap.xml
+Sitemap: https://exercise-finder-eta.vercel.app/sitemap.xml

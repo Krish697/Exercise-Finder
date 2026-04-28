@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import (Flask, render_template, request, redirect,
-                   url_for, session, flash, jsonify, send_from_directory)
+                   url_for, session, flash, jsonify, send_from_directory,
+                   make_response)
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -140,17 +141,28 @@ def google_verify():
 
 @app.route('/sitemap.xml')
 def sitemap():
-    """Generating a simple dynamic sitemap."""
-    pages = []
-    # Public pages
-    for rule in app.url_map.iter_rules():
-        if "GET" in rule.methods and len(rule.arguments) == 0:
-            pages.append(rule.rule)
-    
-    # You can add a full domain here if you know it, 
-    # but search engines often handle relative paths or the provided sitemap location.
-    sitemap_xml = render_template('sitemap.xml', pages=pages, now=datetime.now().strftime('%Y-%m-%d'))
-    return sitemap_xml, {'Content-Type': 'application/xml'}
+    """Serve a static sitemap of all public pages."""
+    base = 'https://exercise-finder-eta.vercel.app'
+    today = datetime.now().strftime('%Y-%m-%d')
+    # Only include pages accessible without login
+    public_paths = ['/', '/login', '/register']
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for path in public_paths:
+        xml_lines += [
+            '  <url>',
+            f'    <loc>{base}{path}</loc>',
+            f'    <lastmod>{today}</lastmod>',
+            '    <changefreq>weekly</changefreq>',
+            '    <priority>0.8</priority>',
+            '  </url>',
+        ]
+    xml_lines.append('</urlset>')
+    response = make_response('\n'.join(xml_lines))
+    response.headers['Content-Type'] = 'application/xml'
+    return response
 
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
