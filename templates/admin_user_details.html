@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}User Details: {{ user['username'] }}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end;">
+  <div>
+    <a href="{{ url_for('view_database') }}" style="color: var(--text-3); font-size: 0.9rem;">← Back to Database</a>
+    <h1 style="margin-top: 0.5rem;">User Profile</h1>
+    <p class="page-sub">Admin view for {{ user['username'] }} ({{ user['email'] }})</p>
+  </div>
+  <form action="{{ url_for('admin_delete_user', user_id=user['id']) }}" method="POST" onsubmit="return confirm('Permanently delete User {{ user['username'] }}?');">
+    <button type="submit" class="btn btn-primary" style="background:var(--danger); border-color:var(--danger);">🗑️ Delete User</button>
+  </form>
+</div>
+
+<div class="cards-grid cards-grid-3" style="margin-bottom: 2rem;">
+  <div class="card">
+    <h3 class="card-title">Attributes</h3>
+    <p><strong>Age:</strong> {{ user['age'] or 'Not set' }}</p>
+    <p><strong>Height:</strong> {{ user['height'] or 'Not set' }} cm</p>
+    <p><strong>Weight:</strong> {{ user['weight'] or 'Not set' }} kg</p>
+    <p><strong>Gender:</strong> {{ user['gender'] | title if user['gender'] else 'Not set' }}</p>
+  </div>
+  <div class="card">
+    <h3 class="card-title">Summary metrics</h3>
+    <p><strong>Workouts Logged:</strong> {{ history|length }}</p>
+    <p><strong>Active Goals:</strong> {{ goals|length }}</p>
+    <p><strong>Favourites Saved:</strong> {{ favs|length }}</p>
+    <p><strong>Weight Logs:</strong> {{ weight_log|length }}</p>
+  </div>
+</div>
+
+<div class="section-title">Workout History</div>
+<div class="card" style="margin-bottom: 2rem;">
+  {% if history %}
+  <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+    <thead>
+      <tr style="border-bottom: 2px solid var(--border); color: var(--text-2);">
+        <th style="padding: 0.5rem;">Activity</th>
+        <th style="padding: 0.5rem;">Duration</th>
+        <th style="padding: 0.5rem;">Calories</th>
+        <th style="padding: 0.5rem;">Sets</th>
+        <th style="padding: 0.5rem;">Reps</th>
+        <th style="padding: 0.5rem;">Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in history %}
+      <tr style="border-bottom: 1px solid var(--border-l);">
+        <td style="padding: 0.5rem;">{{ item['activity'] }}</td>
+        <td style="padding: 0.5rem;">{{ item['duration'] }} min</td>
+        <td style="padding: 0.5rem;">{{ item['calories'] }}</td>
+        <td style="padding: 0.5rem;">{{ item['sets'] }}</td>
+        <td style="padding: 0.5rem;">{{ item['reps'] }}</td>
+        <td style="padding: 0.5rem;">{{ item['timestamp'][:16] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--text-3); font-style: italic;">No workouts recorded.</p>
+  {% endif %}
+</div>
+
+<div class="section-title">Weight Log</div>
+<div class="card" style="margin-bottom: 2rem;">
+  {% if weight_log %}
+  <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+    <thead>
+      <tr style="border-bottom: 2px solid var(--border); color: var(--text-2);">
+        <th style="padding: 0.5rem;">Weight (kg)</th>
+        <th style="padding: 0.5rem;">Logged At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for w in weight_log %}
+      <tr style="border-bottom: 1px solid var(--border-l);">
+        <td style="padding: 0.5rem;">{{ w['weight'] }}</td>
+        <td style="padding: 0.5rem;">{{ w['logged_at'] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--text-3); font-style: italic;">No weight history recorded.</p>
+  {% endif %}
+</div>
+
+<div class="section-title">Active Goals</div>
+<div class="card">
+  {% if goals %}
+  <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+    <thead>
+      <tr style="border-bottom: 2px solid var(--border); color: var(--text-2);">
+        <th style="padding: 0.5rem;">Category</th>
+        <th style="padding: 0.5rem;">Target</th>
+        <th style="padding: 0.5rem;">By Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in goals %}
+      <tr style="border-bottom: 1px solid var(--border-l);">
+        <td style="padding: 0.5rem;"><span class="badge badge-primary">{{ g['category'] }}</span></td>
+        <td style="padding: 0.5rem;">{{ g['target_value'] }}</td>
+        <td style="padding: 0.5rem;">{{ g['target_date'] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--text-3); font-style: italic;">No active goals.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

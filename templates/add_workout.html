@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Log Workout — Exercise Finder{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>➕ Log a Workout</h1>
+  <p class="page-sub">Manually record any activity — running, cycling, yoga, and more</p>
+</div>
+
+<div class="form-container">
+  <form method="POST" action="{{ url_for('add_workout') }}" class="styled-form" id="add-workout-form">
+    <div class="form-group">
+      <label for="activity">Activity Name</label>
+      <input type="text" id="activity" name="activity" placeholder="e.g. Cycling, Running, Yoga..." required />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="duration">Duration (minutes)</label>
+        <input type="number" id="duration" name="duration" placeholder="e.g. 45" min="1" required />
+      </div>
+      <div class="form-group">
+        <label for="calories">Calories Burned</label>
+        <input type="number" id="calories" name="calories" placeholder="e.g. 300" min="1" required />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="sets">Sets (Optional)</label>
+        <input type="number" id="sets" name="sets" placeholder="e.g. 3" min="0" />
+      </div>
+      <div class="form-group">
+        <label for="reps">Reps (Optional)</label>
+        <input type="number" id="reps" name="reps" placeholder="e.g. 12" min="0" />
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" id="save-workout-btn">Save Workout to Timeline</button>
+  </form>
+
+  <div class="card info-card" style="margin-top: 1.5rem;">
+    <p>💡 Use this for activities not found in the Exercise Search (e.g. cycling, swimming, yoga).</p>
+  </div>
+</div>
+{% endblock %}

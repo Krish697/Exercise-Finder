@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Timeline — Exercise Finder{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📅 Workout Timeline</h1>
+  <p class="page-sub">Your complete fitness history in reverse-chronological order</p>
+</div>
+
+<div class="search-bar-row">
+  <form method="GET" action="{{ url_for('timeline') }}" id="timeline-search-form">
+    <div class="search-bar-wrap">
+      <input type="text" name="q" id="timeline-search-input" value="{{ query }}" placeholder="Search activities..." />
+      <button type="submit" class="btn btn-primary" id="timeline-search-btn">Search</button>
+      {% if query %}
+      <a href="{{ url_for('timeline') }}" class="btn btn-outline" id="clear-search-btn">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+  <a href="{{ url_for('add_workout') }}" class="btn btn-primary" id="add-workout-link">+ Log Workout</a>
+</div>
+
+{% if history %}
+<div class="timeline" id="timeline-list">
+  {% for item in history %}
+  <div class="timeline-item" id="timeline-item-{{ loop.index }}">
+    <div class="timeline-dot"></div>
+    <div class="timeline-body">
+      <div class="timeline-header">
+        <span class="timeline-activity">{{ item['activity'] }}</span>
+        <span class="timeline-date">{{ item['timestamp'][:16] }}</span>
+      </div>
+      <div class="timeline-stats">
+        <span class="tl-stat">⏱ {{ item['duration'] }} min</span>
+        <span class="tl-stat">🔥 {{ item['calories'] }} kcal</span>
+        {% if item['sets'] > 0 %}<span class="tl-stat">🏋️ {{ item['sets'] }} sets</span>{% endif %}
+        {% if item['reps'] > 0 %}<span class="tl-stat">🔄 {{ item['reps'] }} reps</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% elif query %}
+<div class="empty-state" id="no-search-results">
+  <div class="empty-icon">🔍</div>
+  <p>No activities found matching "<strong>{{ query }}</strong>".</p>
+</div>
+{% else %}
+<div class="empty-state" id="no-history-msg">
+  <div class="empty-icon">📭</div>
+  <p>No workout history found. <a href="{{ url_for('add_workout') }}">Log your first workout!</a></p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Search Exercises — Exercise Finder{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🔍 Workout Finder</h1>
+  <p class="page-sub">Search thousands of exercises powered by API Ninjas</p>
+  <div class="api-badge">🌐 API Powered</div>
+</div>
+
+<div class="disclaimer-banner">
+  ⚠️ Always perform exercises with proper form to prevent injury. This is for informational purposes only — not a substitute for professional fitness advice.
+</div>
+
+<div class="card search-card" id="search-form-card">
+  <form method="POST" action="{{ url_for('search') }}" class="search-form" id="search-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="muscle">Muscle Group</label>
+        <select id="muscle" name="muscle">
+          <option value="" {% if muscle == '' %}selected{% endif %}>Any Muscle</option>
+          <option value="abdominals" {% if muscle == 'abdominals' %}selected{% endif %}>Abdominals</option>
+          <option value="abductors" {% if muscle == 'abductors' %}selected{% endif %}>Abductors</option>
+          <option value="adductors" {% if muscle == 'adductors' %}selected{% endif %}>Adductors</option>
+          <option value="biceps" {% if muscle == 'biceps' %}selected{% endif %}>Biceps</option>
+          <option value="calves" {% if muscle == 'calves' %}selected{% endif %}>Calves</option>
+          <option value="chest" {% if muscle == 'chest' %}selected{% endif %}>Chest</option>
+          <option value="forearms" {% if muscle == 'forearms' %}selected{% endif %}>Forearms</option>
+          <option value="glutes" {% if muscle == 'glutes' %}selected{% endif %}>Glutes</option>
+          <option value="hamstrings" {% if muscle == 'hamstrings' %}selected{% endif %}>Hamstrings</option>
+          <option value="lats" {% if muscle == 'lats' %}selected{% endif %}>Lats</option>
+          <option value="lower_back" {% if muscle == 'lower_back' %}selected{% endif %}>Lower Back</option>
+          <option value="middle_back" {% if muscle == 'middle_back' %}selected{% endif %}>Middle Back</option>
+          <option value="neck" {% if muscle == 'neck' %}selected{% endif %}>Neck</option>
+          <option value="quadriceps" {% if muscle == 'quadriceps' %}selected{% endif %}>Quadriceps</option>
+          <option value="traps" {% if muscle == 'traps' %}selected{% endif %}>Traps</option>
+          <option value="triceps" {% if muscle == 'triceps' %}selected{% endif %}>Triceps</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="type">Exercise Type</label>
+        <select id="type" name="type">
+          <option value="" {% if ex_type == '' %}selected{% endif %}>Any Type</option>
+          <option value="cardio" {% if ex_type == 'cardio' %}selected{% endif %}>Cardio</option>
+          <option value="olympic_weightlifting" {% if ex_type == 'olympic_weightlifting' %}selected{% endif %}>Olympic Weightlifting</option>
+          <option value="plyometrics" {% if ex_type == 'plyometrics' %}selected{% endif %}>Plyometrics</option>
+          <option value="powerlifting" {% if ex_type == 'powerlifting' %}selected{% endif %}>Powerlifting</option>
+          <option value="strength" {% if ex_type == 'strength' %}selected{% endif %}>Strength</option>
+          <option value="stretching" {% if ex_type == 'stretching' %}selected{% endif %}>Stretching</option>
+          <option value="strongman" {% if ex_type == 'strongman' %}selected{% endif %}>Strongman</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty" name="difficulty">
+          <option value="" {% if difficulty == '' %}selected{% endif %}>Any Level</option>
+          <option value="beginner" {% if difficulty == 'beginner' %}selected{% endif %}>Beginner</option>
+          <option value="intermediate" {% if difficulty == 'intermediate' %}selected{% endif %}>Intermediate</option>
+          <option value="expert" {% if difficulty == 'expert' %}selected{% endif %}>Expert</option>
+        </select>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" id="search-submit-btn">Search Exercises</button>
+  </form>
+</div>
+
+{% if error %}
+<div class="alert alert-danger" id="api-error-alert">❌ {{ error }}</div>
+{% endif %}
+
+{% if exercises %}
+<div class="section-title">{{ exercises | length }} Exercise{{ 's' if exercises | length != 1 }} Found</div>
+<div class="exercise-grid" id="exercise-results">
+  {% for ex in exercises %}
+  <div class="exercise-card" id="ex-{{ loop.index }}">
+    <div class="ex-header">
+      <div>
+        <h3 class="ex-name">{{ ex.name }}</h3>
+        <div class="ex-meta">
+          <span class="badge badge-muscle">{{ ex.muscle | replace('_', ' ') | title }}</span>
+          <span class="badge badge-type">{{ ex.type | replace('_', ' ') | title }}</span>
+          <span class="badge badge-{{ 'success' if ex.difficulty == 'beginner' else 'warning' if ex.difficulty == 'intermediate' else 'danger' }}">{{ ex.difficulty | title }}</span>
+        </div>
+      </div>
+      <button
+        class="fav-btn {% if ex.name in fav_names %}fav-active{% endif %}"
+        id="fav-btn-{{ loop.index }}"
+        data-name="{{ ex.name }}"
+        data-type="{{ ex.type }}"
+        data-muscle="{{ ex.muscle }}"
+        data-difficulty="{{ ex.difficulty }}"
+        data-instructions="{{ ex.instructions }}"
+        onclick="toggleFav(this)"
+        title="Save to Favourites">
+        {% if ex.name in fav_names %}❤️{% else %}🤍{% endif %}
+      </button>
+    </div>
+    {% if ex.equipment %}
+    <div class="ex-equipment">🏋️ Equipment: <strong>{{ ex.equipment | replace('_', ' ') | title }}</strong></div>
+    {% endif %}
+    <details class="ex-instructions">
+      <summary>View Instructions</summary>
+      <p>{{ ex.instructions }}</p>
+    </details>
+    <a href="https://www.youtube.com/results?search_query={{ ex.name | replace(' ', '+') }}+exercise+tutorial"
+       target="_blank" rel="noopener" class="btn btn-outline btn-sm" id="video-btn-{{ loop.index }}">
+      ▶ Watch Tutorial
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% elif request.method == 'POST' and not error %}
+<div class="empty-state" id="no-results-msg">
+  <div class="empty-icon">🤷</div>
+  <p>No exercises found for your criteria. Try adjusting your filters.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function toggleFav(btn) {
+  const name = btn.dataset.name;
+  const isActive = btn.classList.contains('fav-active');
+  const url = isActive ? '/favourite/remove' : '/favourite/add';
+  const body = isActive ? { name } : {
+    name, type: btn.dataset.type,
+    muscle: btn.dataset.muscle,
+    difficulty: btn.dataset.difficulty,
+    instructions: btn.dataset.instructions
+  };
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (data.success) {
+    btn.classList.toggle('fav-active');
+    btn.textContent = btn.classList.contains('fav-active') ? '❤️' : '🤍';
+  }
+}
+</script>
+{% endblock %}

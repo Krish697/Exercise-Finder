@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Health Calculator — Exercise Finder{% endblock %}
+{% block meta_description %}Calculate BMI and BMR for yourself or anyone else. Save results to your profile with one
+click.{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Calculator page styles ── */
+  .calc-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 700px) {
+    .calc-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .calc-form-card {
+    background: var(--card-bg, #1e1e2e);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
+    padding: 2rem;
+  }
+
+  .calc-result-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  /* BMI gauge */
+  .bmi-gauge-wrap {
+    margin: 0.75rem 0;
+  }
+
+  .bmi-bar {
+    height: 12px;
+    border-radius: 999px;
+    background: linear-gradient(to right, #3b82f6 0%, #22c55e 30%, #f59e0b 60%, #ef4444 100%);
+    position: relative;
+  }
+
+  .bmi-marker {
+    position: absolute;
+    top: -4px;
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border: 3px solid #6c63ff;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    transition: left 0.5s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+
+  .bmi-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-muted, #888);
+    margin-top: 6px;
+  }
+
+  /* Metric big number */
+  .metric-big {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--accent, #6c63ff);
+  }
+
+  .metric-unit-sm {
+    font-size: 1rem;
+    color: var(--text-muted, #888);
+    font-weight: 400;
+  }
+
+  /* Save-to-me banner */
+  .save-banner {
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.15), rgba(56, 182, 255, 0.10));
+    border: 1px solid rgba(108, 99, 255, 0.35);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .save-banner p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-muted, #aaa);
+  }
+
+  .save-banner strong {
+    color: var(--text, #fff);
+  }
+
+  /* Not-for-me note */
+  .not-me-note {
+    font-size: 0.8rem;
+    color: var(--text-muted, #888);
+    text-align: center;
+    margin-top: 0.25rem;
+  }
+
+  .risk-banner {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 12px;
+    padding: 0.9rem 1.25rem;
+    color: #f87171;
+    font-size: 0.9rem;
+  }
+
+  /* Empty state placeholder */
+  .calc-placeholder {
+    border: 2px dashed var(--border, rgba(255, 255, 255, 0.1));
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    color: var(--text-muted, #888);
+    gap: 0.75rem;
+  }
+
+  .calc-placeholder .ph-icon {
+    font-size: 3rem;
+  }
+
+  .calc-placeholder p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Health Calculator</h1>
+  <p class="page-sub">Calculate BMI &amp; BMR for <strong>yourself or anyone else</strong></p>
+</div>
+
+<div class="calc-layout">
+
+  <!-- ── LEFT: Input Form ── -->
+  <div class="calc-form-card">
+    <h2 style="font-size:1.1rem;margin-bottom:1.5rem;">Enter Measurements</h2>
+    <form method="POST" action="{{ url_for('calculator') }}" id="calc-form" autocomplete="off">
+
+      <div class="form-group">
+        <label for="calc-weight">Weight (kg)</label>
+        <input type="number" step="0.1" min="1" max="500" id="calc-weight" name="weight" class="form-control"
+          value="{{ form_data.weight if form_data.weight else '' }}" placeholder="e.g. 70" required>
+      </div>
+
+      <div class="form-group">
+        <label for="calc-height">Height (cm)</label>
+        <input type="number" step="0.1" min="50" max="300" id="calc-height" name="height" class="form-control"
+          value="{{ form_data.height if form_data.height else '' }}" placeholder="e.g. 175" required>
+      </div>
+
+      <div class="form-group">
+        <label for="calc-age">Age (years)</label>
+        <input type="number" min="1" max="120" id="calc-age" name="age" class="form-control"
+          value="{{ form_data.age if form_data.age else '' }}" placeholder="e.g. 25" required>
+      </div>
+
+      <div class="form-group">
+        <label for="calc-gender">Biological Sex</label>
+        <select id="calc-gender" name="gender" class="form-control" required>
+          <option value="" disabled {% if not form_data.gender %}selected{% endif %}>Select…</option>
+          <option value="male" {% if form_data.gender=='male' %}selected{% endif %}>Male</option>
+          <option value="female" {% if form_data.gender=='female' %}selected{% endif %}>Female</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="calc-submit-btn" style="width:100%;margin-top:0.5rem;">
+        Calculate
+      </button>
+
+      {% if result %}
+      <button type="button" class="btn btn-outline" id="calc-reset-btn"
+        onclick="window.location='{{ url_for('calculator') }}'" style="width:100%;margin-top:0.75rem;">
+        ↺ Reset
+      </button>
+      {% endif %}
+
+    </form>
+
+    <p class="disclaimer" style="margin-top:1.25rem;">ℹ️ Results are estimates for informational purposes only. Not
+      medical advice.</p>
+  </div>
+
+  <!-- ── RIGHT: Results ── -->
+  <div class="calc-result-panel">
+
+    {% if result %}
+
+    <!-- At-risk warning -->
+    {% if result.at_risk %}
+    <div class="risk-banner" id="calc-risk-banner">
+      ⚠️ The BMI result indicates a potential health risk. Please consult a healthcare professional.
+    </div>
+    {% endif %}
+
+    <!-- BMI Card -->
+    <div class="card metric-card" id="calc-bmi-result">
+      <div class="card-header">
+        <span class="card-icon">⚖️</span>
+        <h3>Body Mass Index (BMI)</h3>
+      </div>
+      <div class="metric-big">
+        {{ result.bmi }}
+        <span class="metric-unit-sm">kg/m²</span>
+      </div>
+      <div class="bmi-gauge-wrap">
+        <div class="bmi-bar">
+          <div class="bmi-marker" style="left: {{ [[((result.bmi - 15) / 25 * 100), 0] | max, 100] | min }}%">
+          </div>
+        </div>
+        <div class="bmi-labels">
+          <span>Underweight</span><span>Normal</span><span>Overweight</span><span>Obese</span>
+        </div>
+      </div>
+      <span
+        class="badge badge-{{ 'success' if result.bmi_category == 'Normal' else 'warning' if result.bmi_category == 'Overweight' else 'danger' }}">
+        {{ result.bmi_category }}
+      </span>
+    </div>
+
+    <!-- BMR Card -->
+    <div class="card metric-card" id="calc-bmr-result">
+      <div class="card-header">
+        <span class="card-icon">🔥</span>
+        <h3>Basal Metabolic Rate (BMR)</h3>
+      </div>
+      <div class="metric-big">
+        {{ result.bmr }}
+        <span class="metric-unit-sm">kcal / day</span>
+      </div>
+      <p class="metric-desc" style="margin-top:0.5rem;">
+        Calories burned at complete rest to sustain basic body functions.
+        (Mifflin-St Jeor Equation)
+      </p>
+    </div>
+
+    <!-- "This is me" Save Banner -->
+    <div class="save-banner" id="save-to-me-banner">
+      <div>
+        <strong>Is this for you?</strong>
+        <p>Save these measurements to your profile and keep your dashboard up to date.</p>
+      </div>
+      <form method="POST" action="{{ url_for('save_calculator_to_profile') }}" id="save-to-profile-form">
+        <input type="hidden" name="weight" value="{{ result.weight }}">
+        <input type="hidden" name="height" value="{{ result.height }}">
+        <input type="hidden" name="age" value="{{ result.age }}">
+        <input type="hidden" name="gender" value="{{ result.gender }}">
+        <button type="submit" class="btn btn-primary" id="save-to-profile-btn">
+          ✅ This is me — Save to Profile
+        </button>
+      </form>
+      <p class="not-me-note" style="width:100%;">
+        Not you? No problem — results are not saved unless you click the button above.
+      </p>
+    </div>
+
+    {% else %}
+
+    <!-- Placeholder when no result yet -->
+    <div class="calc-placeholder" id="calc-empty-state">
+      <span class="ph-icon">📐</span>
+      <strong>Your results will appear here</strong>
+      <p>Fill in the form on the left and click <em>Calculate</em> to see your BMI and BMR.</p>
+    </div>
+
+    {% endif %}
+
+  </div><!-- /.calc-result-panel -->
+</div><!-- /.calc-layout -->
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Progress Report — Exercise Finder{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📈 Progress Report</h1>
+  <p class="page-sub">Your consistency, performance trends, and weight journey</p>
+</div>
+
+<!-- Stats Summary -->
+<div class="cards-grid cards-grid-4">
+  <div class="card stat-card" id="stat-workouts">
+    <div class="stat-icon">🏋️</div>
+    <div class="stat-num">{{ stats.total_workouts }}</div>
+    <div class="stat-label">Total Workouts</div>
+  </div>
+  <div class="card stat-card" id="stat-minutes">
+    <div class="stat-icon">⏱</div>
+    <div class="stat-num">{{ stats.total_minutes }}</div>
+    <div class="stat-label">Minutes Trained</div>
+  </div>
+  <div class="card stat-card" id="stat-calories">
+    <div class="stat-icon">🔥</div>
+    <div class="stat-num">{{ stats.total_calories }}</div>
+    <div class="stat-label">Calories Burned</div>
+  </div>
+  <div class="card stat-card" id="stat-top">
+    <div class="stat-icon">⭐</div>
+    <div class="stat-num" style="font-size:1.2rem;">{{ stats.most_common }}</div>
+    <div class="stat-label">Top Activity</div>
+  </div>
+</div>
+
+<!-- Weight Graph -->
+<div class="card chart-card" id="weight-chart-card">
+  <div class="card-header">
+    <span class="card-icon">📉</span>
+    <h3>Weight Journey</h3>
+  </div>
+  {% if weight_data %}
+  <canvas id="weightChart" height="100"></canvas>
+  {% else %}
+  <div class="empty-state" id="no-weight-data">
+    <div class="empty-icon">📊</div>
+    <p>No weight records yet. Update your weight in <a href="{{ url_for('profile') }}">Profile</a> to start tracking.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% if stats.total_workouts == 0 %}
+<div class="empty-state" id="no-progress-data" style="margin-top:2rem;">
+  <div class="empty-icon">🌱</div>
+  <p>Not enough data to generate a full report. <a href="{{ url_for('add_workout') }}">Log some workouts</a> to get started!</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if weight_data %}
+<script>
+const ctx = document.getElementById('weightChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: {{ weight_labels | tojson }},
+    datasets: [{
+      label: 'Weight (kg)',
+      data: {{ weight_data | tojson }},
+      borderColor: '#7c3aed',
+      backgroundColor: 'rgba(124, 58, 237, 0.1)',
+      borderWidth: 2.5,
+      pointBackgroundColor: '#7c3aed',
+      pointRadius: 5,
+      tension: 0.4,
+      fill: true
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#e2e8f0' } },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    scales: {
+      x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+      y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Favourites — Exercise Finder{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>❤️ Favourite Exercises</h1>
+  <p class="page-sub">Your personally curated exercise library</p>
+</div>
+
+{% if favourites %}
+<div class="exercise-grid" id="favourites-grid">
+  {% for fav in favourites %}
+  <div class="exercise-card" id="fav-card-{{ loop.index }}">
+    <div class="ex-header">
+      <div>
+        <h3 class="ex-name">{{ fav['exercise_name'] }}</h3>
+        <div class="ex-meta">
+          {% if fav['muscle'] %}<span class="badge badge-muscle">{{ fav['muscle'] | replace('_', ' ') | title }}</span>{% endif %}
+          {% if fav['exercise_type'] %}<span class="badge badge-type">{{ fav['exercise_type'] | replace('_', ' ') | title }}</span>{% endif %}
+          {% if fav['difficulty'] %}<span class="badge badge-{{ 'success' if fav['difficulty'] == 'beginner' else 'warning' if fav['difficulty'] == 'intermediate' else 'danger' }}">{{ fav['difficulty'] | title }}</span>{% endif %}
+        </div>
+      </div>
+      <button class="fav-btn fav-active"
+              id="remove-fav-{{ loop.index }}"
+              onclick="removeFav(this, '{{ fav['exercise_name'] }}')"
+              title="Remove from Favourites">❤️</button>
+    </div>
+    {% if fav['instructions'] %}
+    <details class="ex-instructions">
+      <summary>View Instructions</summary>
+      <p>{{ fav['instructions'] }}</p>
+    </details>
+    {% endif %}
+    <a href="https://www.youtube.com/results?search_query={{ fav['exercise_name'] | replace(' ', '+') }}+exercise+tutorial"
+       target="_blank" rel="noopener" class="btn btn-outline btn-sm" id="yt-btn-fav-{{ loop.index }}">
+      ▶ Watch Tutorial
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" id="no-favs-msg">
+  <div class="empty-icon">🤍</div>
+  <p>No favourite exercises yet. <a href="{{ url_for('search') }}">Search for exercises</a> and tap the heart icon to save them here!</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function removeFav(btn, name) {
+  const res = await fetch('/favourite/remove', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  const data = await res.json();
+  if (data.success) {
+    btn.closest('.exercise-card').style.opacity = '0';
+    btn.closest('.exercise-card').style.transform = 'scale(0.9)';
+    setTimeout(() => btn.closest('.exercise-card').remove(), 300);
+  }
+}
+</script>
+{% endblock %}

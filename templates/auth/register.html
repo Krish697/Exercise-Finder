@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Register — Exercise Finder{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-icon">🏋️</div>
+    <h1 class="auth-title">Create Account</h1>
+    <p class="auth-sub">Start your fitness journey today</p>
+
+    <form method="POST" action="{{ url_for('register') }}" class="auth-form" id="register-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="e.g. fitness_guru" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+" title="Username must be 3-20 characters and contain only letters, numbers, and underscores." />
+      </div>
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="password" name="password" placeholder="Min. 5 chars (Upper, lower, num, special)" required minlength="5" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{5,}" title="Password must be at least 5 characters and contain an uppercase letter, a lowercase letter, a number, and a special character." />
+          <button type="button" class="pw-toggle" id="reg-pw-toggle" aria-label="Toggle password visibility" onclick="togglePw('password','reg-pw-toggle')">👁️</button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="register-submit-btn">Create Account</button>
+    </form>
+
+    <p class="auth-switch">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
+  </div>
+</div>
+{% endblock %}

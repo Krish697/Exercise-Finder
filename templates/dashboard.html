@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Exercise Finder{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Health Dashboard</h1>
+  <p class="page-sub">Welcome back, <strong>{{ user['username'] }}</strong> 👋</p>
+</div>
+
+{% if at_risk %}
+<div class="alert alert-danger" id="health-risk-alert">
+  ⚠️ Your BMI indicates a health risk. Please consult a healthcare professional.
+</div>
+{% endif %}
+
+{% if not user['height'] or not user['weight'] or not user['age'] %}
+<div class="alert alert-warning" id="incomplete-profile-alert">
+  📋 <a href="{{ url_for('profile') }}">Complete your profile</a> to unlock BMI, BMR calculations and goal tracking.
+</div>
+{% endif %}
+
+<!-- Health Metric Cards -->
+<div class="cards-grid cards-grid-3">
+  <!-- BMI Card -->
+  <div class="card metric-card" id="bmi-card">
+    <div class="card-header">
+      <span class="card-icon">⚖️</span>
+      <h3>Body Mass Index</h3>
+    </div>
+    {% if bmi %}
+    <div class="metric-value">{{ bmi }}</div>
+    <div class="bmi-bar-wrap">
+      <div class="bmi-bar">
+        <div class="bmi-marker" style="left: {{ [[(bmi - 15) / 25 * 100, 0] | max, 100] | min }}%"></div>
+      </div>
+      <div class="bmi-labels">
+        <span>Underweight</span><span>Normal</span><span>Overweight</span><span>Obese</span>
+      </div>
+    </div>
+    <span class="badge badge-{{ 'success' if bmi_category == 'Normal' else 'warning' if bmi_category == 'Overweight' else 'danger' }}">{{ bmi_category }}</span>
+    {% else %}
+    <div class="metric-empty">Complete your profile to calculate BMI</div>
+    {% endif %}
+    <p class="disclaimer">ℹ️ For informational purposes only. Not medical advice.</p>
+  </div>
+
+  <!-- BMR Card -->
+  <div class="card metric-card" id="bmr-card">
+    <div class="card-header">
+      <span class="card-icon">🔥</span>
+      <h3>Basal Metabolic Rate</h3>
+    </div>
+    {% if bmr %}
+    <div class="metric-value">{{ bmr }} <span class="metric-unit">kcal/day</span></div>
+    <p class="metric-desc">Calories your body burns at complete rest to maintain basic functions.</p>
+    {% else %}
+    <div class="metric-empty">Complete your profile to calculate BMR</div>
+    {% endif %}
+    <p class="disclaimer">ℹ️ Based on the Mifflin-St Jeor Equation.</p>
+  </div>
+
+  <!-- Quick Stats Card -->
+  <div class="card metric-card" id="stats-card">
+    <div class="card-header">
+      <span class="card-icon">📊</span>
+      <h3>Activity Summary</h3>
+    </div>
+    <div class="stat-row"><span>Total Workouts</span><strong>{{ stats.total_workouts }}</strong></div>
+    <div class="stat-row"><span>Total Minutes</span><strong>{{ stats.total_minutes }}</strong></div>
+    <div class="stat-row"><span>Calories Burned</span><strong>{{ stats.total_calories }}</strong></div>
+    <div class="stat-row"><span>Top Activity</span><strong>{{ stats.most_common }}</strong></div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="section-title">Quick Actions</div>
+<div class="cards-grid cards-grid-4">
+  <a href="{{ url_for('search') }}" class="action-card" id="quick-search">
+    <span class="action-icon">🔍</span>
+    <span>Search Exercises</span>
+  </a>
+  <a href="{{ url_for('add_workout') }}" class="action-card" id="quick-log">
+    <span class="action-icon">➕</span>
+    <span>Log Workout</span>
+  </a>
+  <a href="{{ url_for('timeline') }}" class="action-card" id="quick-timeline">
+    <span class="action-icon">📅</span>
+    <span>View Timeline</span>
+  </a>
+  <a href="{{ url_for('goals') }}" class="action-card" id="quick-goals">
+    <span class="action-icon">🎯</span>
+    <span>Set Goals</span>
+  </a>
+</div>
+
+<!-- Active Goals -->
+{% if goals %}
+<div class="section-title">Active Goals</div>
+<div class="cards-grid cards-grid-2">
+  {% for g in goals[:4] %}
+  <div class="card goal-card-dash">
+    <span class="goal-cat-badge">{{ g['category'] }}</span>
+    <div class="goal-target">Target: <strong>{{ g['target_value'] }}</strong></div>
+    <div class="goal-date">By {{ g['target_date'] }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Exercise Finder — Your Personal Fitness Hub{% endblock %}
+{% block meta_description %}Discover workouts, track health metrics, and achieve your fitness goals.{% endblock %}
+
+{% block content %}
+<div class="landing">
+  <div class="landing-hero">
+    <div class="hero-badge">✨ Powered by API Ninjas</div>
+    <h1 class="hero-title">Your Personal<br><span class="gradient-text">Fitness Hub</span></h1>
+    <p class="hero-sub">Search thousands of exercises, track your workouts, monitor your health metrics, and crush your fitness goals — all in one place.</p>
+    <div class="hero-actions">
+      <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg" id="get-started-btn">Get Started Free</a>
+      <a href="{{ url_for('login') }}" class="btn btn-outline btn-lg" id="login-btn">Sign In</a>
+    </div>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <h3>Smart Exercise Search</h3>
+      <p>Filter by muscle group, type, and difficulty from thousands of professional exercises.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Health Analytics</h3>
+      <p>Auto-calculate your BMI and BMR based on your personal profile data.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📈</div>
+      <h3>Progress Tracking</h3>
+      <p>Visualize your weight journey and workout consistency over time.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <h3>Goal Setting</h3>
+      <p>Set measurable fitness goals and get predicted completion dates.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📅</div>
+      <h3>Workout Timeline</h3>
+      <p>Log every session and browse your full history in one clean view.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">❤️</div>
+      <h3>Favourites</h3>
+      <p>Bookmark exercises you love for instant access without re-searching.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Database Viewer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🛠️ Database Viewer</h1>
+  <p class="page-sub">Developer view of all live SQLite tables and records</p>
+</div>
+
+<div class="alert alert-warning">
+  <strong>Note:</strong> This is a powerful debugging view. In a production environment, this page should be heavily restricted!
+</div>
+
+{% for table_name, rows in db_data.items() %}
+<div class="card" style="margin-bottom: 2rem; overflow-x: auto;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2 style="color: var(--primary-l); font-size: 1.25rem;">Table: {{ table_name }}</h2>
+    <span class="badge badge-type">{{ rows|length }} records</span>
+  </div>
+  
+  {% if rows %}
+  <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+    <thead>
+      <tr style="border-bottom: 2px solid var(--border); color: var(--text-2);">
+        {% for key in rows[0].keys() %}
+        <th style="padding: 0.5rem;">{{ key }}</th>
+        {% endfor %}
+        {% if table_name == 'users' %}
+        <th style="padding: 0.5rem; text-align: right;">Actions</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr style="border-bottom: 1px solid var(--border-l);">
+        {% for value in row.values() %}
+        <td style="padding: 0.5rem; color: var(--text);">
+          {% if value is none %}
+            <span style="color: var(--text-3); font-style: italic;">NULL</span>
+          {% else %}
+            {{ value }}
+          {% endif %}
+        </td>
+        {% endfor %}
+        {% if table_name == 'users' %}
+        <td style="padding: 0.5rem; text-align: right; min-width: 140px;">
+          <a href="{{ url_for('admin_view_user', user_id=row['id']) }}" class="btn btn-outline btn-sm" title="View Full Details">👁️ View</a>
+          <form action="{{ url_for('admin_delete_user', user_id=row['id']) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to completely delete User {{ row['username'] }} and wipe all their history?');">
+            <button type="submit" class="btn btn-primary btn-sm" style="background:var(--danger); border-color:var(--danger);" title="Delete User">🗑️</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--text-3); font-style: italic;">No records found in this table.</p>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% endblock %}

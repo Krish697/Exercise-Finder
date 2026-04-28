@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Exercise Finder{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Discover workouts, track your health, and achieve your fitness goals with Exercise Finder.{% endblock %}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <style>
+    /* ── Password show/hide toggle ── */
+    .pw-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .pw-wrap input {
+      flex: 1;
+      padding-right: 2.8rem !important;
+    }
+    .pw-toggle {
+      position: absolute;
+      right: 0.75rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      color: var(--text-muted, #888);
+      padding: 0;
+      line-height: 1;
+      transition: opacity 0.2s;
+      user-select: none;
+    }
+    .pw-toggle:hover { opacity: 0.7; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  <!-- NAV -->
+  {% if session.user_id %}
+  <nav class="navbar" id="main-nav">
+    <a href="{{ url_for('dashboard') }}" class="nav-brand">
+      <span class="brand-icon">💪</span>
+      <span>Exercise Finder</span>
+    </a>
+    <div class="nav-links">
+      <a href="{{ url_for('search') }}" class="nav-link {% if request.endpoint == 'search' %}active{% endif %}">Search</a>
+      <a href="{{ url_for('add_workout') }}" class="nav-link {% if request.endpoint == 'add_workout' %}active{% endif %}">Log Workout</a>
+      <a href="{{ url_for('timeline') }}" class="nav-link {% if request.endpoint == 'timeline' %}active{% endif %}">Timeline</a>
+      <a href="{{ url_for('progress') }}" class="nav-link {% if request.endpoint == 'progress' %}active{% endif %}">Progress</a>
+      <a href="{{ url_for('goals') }}" class="nav-link {% if request.endpoint == 'goals' %}active{% endif %}">Goals</a>
+      <a href="{{ url_for('favourites') }}" class="nav-link {% if request.endpoint == 'favourites' %}active{% endif %}">Favourites</a>
+      <a href="{{ url_for('calculator') }}" class="nav-link {% if request.endpoint == 'calculator' %}active{% endif %}">🧮 Calculator</a>
+      <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">Profile</a>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">Logout</a>
+    </div>
+    <button class="nav-hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  </nav>
+  {% endif %}
+
+  <!-- FLASH MESSAGES -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-container" id="flash-container">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">
+        <span>{{ message }}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- PAGE CONTENT -->
+  <main class="main-content {% if not session.user_id %}no-nav{% endif %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    // Auto-dismiss flash messages after 4s
+    setTimeout(() => {
+      const fc = document.getElementById('flash-container');
+      if (fc) fc.style.opacity = '0';
+      setTimeout(() => { if (fc) fc.remove(); }, 500);
+    }, 4000);
+
+    // Nav hamburger
+    const ham = document.getElementById('hamburger');
+    if (ham) {
+      ham.addEventListener('click', () => {
+        document.querySelector('.nav-links').classList.toggle('open');
+      });
+    }
+
+    // Sticky nav shadow
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('main-nav');
+      if (nav) nav.classList.toggle('scrolled', window.scrollY > 10);
+    });
+    // Password show / hide toggle
+    function togglePw(inputId, btnId) {
+      const inp = document.getElementById(inputId);
+      const btn = document.getElementById(btnId);
+      if (!inp) return;
+      const isHidden = inp.type === 'password';
+      inp.type = isHidden ? 'text' : 'password';
+      btn.textContent = isHidden ? '🙈' : '👁️';
+      btn.title = isHidden ? 'Hide password' : 'Show password';
+    }
+  </script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
