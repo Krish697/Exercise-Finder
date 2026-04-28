@@ -1,7 +1,10 @@
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'exercise_finder.db')
+if os.environ.get('VERCEL'):
+    DB_PATH = '/tmp/exercise_finder.db'
+else:
+    DB_PATH = os.path.join(os.path.dirname(__file__), 'exercise_finder.db')
 
 
 def get_db():
