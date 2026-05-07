@@ -50,17 +50,33 @@ def login_required(f):
 
 
 def admin_required(f):
-    """Decorator: only allows the admin (set via ADMIN_EMAIL env var)."""
+    """Decorator: HTTP Basic Auth — works independently of the database."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please log in.', 'warning')
-            return redirect(url_for('login'))
-        user = db.get_user_by_id(session['user_id'])
-        if not user or not ADMIN_EMAIL or user['email'] != ADMIN_EMAIL:
-            flash('Access denied. Admins only.', 'error')
-            return redirect(url_for('dashboard'))
-        return f(*args, **kwargs)
+        import base64
+        admin_user = os.getenv('ADMIN_USER', 'admin')
+        admin_pass = os.getenv('ADMIN_PASS', '')
+
+        if not admin_pass:
+            # No password configured — block access entirely
+            return 'Admin not configured.', 403
+
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Basic '):
+            try:
+                credentials = base64.b64decode(auth[6:]).decode('utf-8')
+                username, password = credentials.split(':', 1)
+                if username == admin_user and password == admin_pass:
+                    return f(*args, **kwargs)
+            except Exception:
+                pass
+
+        # Prompt the browser to show the login popup
+        return (
+            'Unauthorized',
+            401,
+            {'WWW-Authenticate': 'Basic realm="Admin Area"'}
+        )
     return decorated
 
 
