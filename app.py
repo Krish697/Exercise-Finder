@@ -164,31 +164,6 @@ def google_verify():
     return send_from_directory(app.static_folder, 'google9f453f9a2cf3553a.html')
 
 
-@app.route('/sitemap.xml')
-def sitemap():
-    """Serve a static sitemap of all public pages."""
-    base = 'https://exercise-finder-eta.vercel.app'
-    today = datetime.now().strftime('%Y-%m-%d')
-    # Only include pages accessible without login
-    public_paths = ['/', '/login', '/register']
-    xml_lines = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ]
-    for path in public_paths:
-        xml_lines += [
-            '  <url>',
-            f'    <loc>{base}{path}</loc>',
-            f'    <lastmod>{today}</lastmod>',
-            '    <changefreq>weekly</changefreq>',
-            '    <priority>0.8</priority>',
-            '  </url>',
-        ]
-    xml_lines.append('</urlset>')
-    response = make_response('\n'.join(xml_lines))
-    response.headers['Content-Type'] = 'application/xml'
-    return response
-
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
 
