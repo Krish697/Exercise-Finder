@@ -126,7 +126,7 @@ def calculate_bmr(weight, height, age, gender):
 def sitemap():
     """Generate a sitemap for public pages."""
     from flask import Response
-    base = 'https://exercise-finder-eta.vercel.app'
+    base = 'https://exercise-finder.vercel.app'
     pages = [
         ('/', '1.0', 'weekly'),
         ('/login', '0.8', 'monthly'),
