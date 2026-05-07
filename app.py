@@ -120,6 +120,31 @@ def calculate_bmr(weight, height, age, gender):
         return round(10 * weight + 6.25 * height - 5 * age - 161)
 
 
+# ─── Sitemap ─────────────────────────────────────────────────────────────────
+
+@app.route('/sitemap.xml')
+def sitemap():
+    """Generate a sitemap for public pages."""
+    from flask import Response
+    base = 'https://exercise-finder-eta.vercel.app'
+    pages = [
+        ('/', '1.0', 'weekly'),
+        ('/login', '0.8', 'monthly'),
+        ('/register', '0.8', 'monthly'),
+        ('/calculator', '0.7', 'monthly'),
+    ]
+    xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+                 '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for path, priority, freq in pages:
+        xml_parts.append(f'''  <url>
+    <loc>{base}{path}</loc>
+    <changefreq>{freq}</changefreq>
+    <priority>{priority}</priority>
+  </url>''')
+    xml_parts.append('</urlset>')
+    return Response('\n'.join(xml_parts), mimetype='application/xml')
+
+
 # ─── Landing ─────────────────────────────────────────────────────────────────
 
 @app.route('/')
