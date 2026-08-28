@@ -57,15 +57,9 @@
     </a>
     <div class="nav-links">
       <a href="{{ url_for('search') }}" class="nav-link {% if request.endpoint == 'search' %}active{% endif %}">Search</a>
-<<<<<<< HEAD
       <a href="{{ url_for('muscle_map') }}" class="nav-link {% if request.endpoint == 'muscle_map' %}active{% endif %}">Muscle Map</a>
       <a href="{{ url_for('ai_plan') }}" class="nav-link {% if request.endpoint == 'ai_plan' %}active{% endif %}">AI Plan</a>
       <a href="{{ url_for('plans') }}" class="nav-link {% if request.endpoint in ['plans','view_plan','create_plan'] %}active{% endif %}">Plans</a>
-=======
-      <a href="{{ url_for('muscle_map') }}" class="nav-link {% if request.endpoint == 'muscle_map' %}active{% endif %}">💪 Muscle Map</a>
-      <a href="{{ url_for('ai_plan') }}" class="nav-link {% if request.endpoint == 'ai_plan' %}active{% endif %}">🤖 AI Plan</a>
-      <a href="{{ url_for('plans') }}" class="nav-link {% if request.endpoint in ['plans','view_plan','create_plan'] %}active{% endif %}">📋 Plans</a>
->>>>>>> e73d73ecac4ab4b9508a967f9e1d5a8c359c29dc
       <a href="{{ url_for('add_workout') }}" class="nav-link {% if request.endpoint == 'add_workout' %}active{% endif %}">Log Workout</a>
       <a href="{{ url_for('timeline') }}" class="nav-link {% if request.endpoint == 'timeline' %}active{% endif %}">Timeline</a>
       <a href="{{ url_for('progress') }}" class="nav-link {% if request.endpoint == 'progress' %}active{% endif %}">Progress</a>
