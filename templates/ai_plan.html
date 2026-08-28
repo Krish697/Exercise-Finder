@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}AI Workout Recommendations — Exercise Finder{% endblock %}
+
+{% block extra_head %}
+<style>
+  .ai-hero {
+    text-align: center; padding: 2rem 1rem 1rem;
+  }
+  .ai-hero .ai-icon {
+    font-size: 3rem; margin-bottom: 0.5rem;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .ai-hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; }
+  .ai-badge-row { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2rem; }
+  .ai-badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background: var(--card-bg); border: 1px solid var(--border);
+    padding: 0.35rem 0.9rem; border-radius: 999px;
+    font-size: 0.8rem; color: var(--text-2);
+  }
+  .ai-badge.active { border-color: var(--primary); color: var(--primary-l); background: rgba(99,102,241,0.1); }
+
+  .plan-gen-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+    max-width: 960px; margin: 0 auto;
+  }
+  @media (max-width: 700px) { .plan-gen-grid { grid-template-columns: 1fr; } }
+
+  .template-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+  .template-btn {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 0.75rem; padding: 1rem 0.75rem; text-align: center;
+    cursor: pointer; transition: all 0.2s; font-size: 0.85rem; color: var(--text-2);
+    display: flex; flex-direction: column; gap: 0.4rem; align-items: center;
+  }
+  .template-btn:hover { border-color: var(--primary-l); color: var(--text); transform: translateY(-2px); }
+  .template-btn.selected { border-color: var(--primary); background: rgba(99,102,241,0.12); color: var(--primary-l); }
+  .template-icon { font-size: 1.8rem; }
+
+  /* Generated plan preview */
+  .plan-preview-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 1.1rem; padding: 1.5rem; margin-top: 2rem;
+    max-width: 760px; margin-left: auto; margin-right: auto;
+    animation: slideUp 0.4s ease;
+  }
+  @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .plan-preview-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 1rem; margin-bottom: 1rem;
+  }
+  .plan-preview-title { font-size: 1.25rem; font-weight: 800; color: var(--text); }
+  .plan-ex-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.7rem 0; border-bottom: 1px solid var(--border-l); font-size: 0.88rem;
+  }
+  .plan-ex-row:last-child { border-bottom: none; }
+  .plan-ex-name { font-weight: 600; color: var(--text); }
+  .plan-ex-meta { color: var(--text-3); font-size: 0.8rem; }
+  .save-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.25rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ai-hero">
+  <div class="ai-icon">🤖</div>
+  <h1>AI Workout Planner</h1>
+  <p class="page-sub">Describe your goal or pick a template — get a personalised plan instantly</p>
+
+  <div class="ai-badge-row">
+    {% if ai_available %}
+    <span class="ai-badge active">✨ Gemini AI Active</span>
+    {% else %}
+    <span class="ai-badge">📋 Template Mode (AI key not set)</span>
+    {% endif %}
+    <span class="ai-badge">🆓 Always Free</span>
+    <span class="ai-badge">💾 Save to Checklist</span>
+  </div>
+</div>
+
+<div class="plan-gen-grid">
+  <!-- AI / Goal input -->
+  <div class="card" id="ai-goal-card">
+    <h2 class="card-title">{{ '🤖 Describe Your Goal' if ai_available else '🎯 Describe Your Goal' }}</h2>
+    <p style="color:var(--text-2);font-size:0.85rem;margin-bottom:1rem;">
+      {% if ai_available %}Gemini AI will create a personalised plan for you.{% else %}We'll match your goal to the best template.{% endif %}
+    </p>
+    <form method="POST" action="{{ url_for('ai_plan') }}" class="styled-form" id="ai-goal-form">
+      <input type="hidden" name="action" value="generate">
+      <input type="hidden" name="template_type" id="hidden-template" value="">
+      <div class="form-group">
+        <label for="goal-input">Your goal</label>
+        <input type="text" id="goal-input" name="goal" placeholder="e.g. Build chest muscle at home with dumbbells" autocomplete="off" />
+      </div>
+      {% if ai_available %}
+      <div class="form-group">
+        <label for="fitness-level">Fitness level</label>
+        <select id="fitness-level" name="fitness_level">
+          <option value="beginner">Beginner</option>
+          <option value="intermediate" selected>Intermediate</option>
+          <option value="advanced">Advanced</option>
+        </select>
+      </div>
+      {% endif %}
+      <button type="submit" class="btn btn-primary" id="gen-ai-btn">
+        {{ '✨ Generate AI Plan' if ai_available else '📋 Get Plan' }}
+      </button>
+    </form>
+  </div>
+
+  <!-- Template picker -->
+  <div class="card" id="template-card">
+    <h2 class="card-title">⚡ Quick Templates</h2>
+    <p style="color:var(--text-2);font-size:0.85rem;margin-bottom:0.5rem;">
+      Pick a pre-built plan to start immediately.
+    </p>
+    <div class="template-grid">
+      {% for key, tmpl in templates.items() %}
+      <form method="POST" action="{{ url_for('ai_plan') }}" style="margin:0;">
+        <input type="hidden" name="action" value="generate">
+        <input type="hidden" name="template_type" value="{{ key }}">
+        <input type="hidden" name="goal" value="{{ key }}">
+        <button type="submit" class="template-btn" id="tmpl-{{ key }}">
+          <span class="template-icon">
+            {% if key == 'strength' %}🏋️
+            {% elif key == 'hypertrophy' %}💪
+            {% elif key == 'fat_loss' %}🔥
+            {% elif key == 'home' %}🏠
+            {% elif key == 'cardio' %}🏃
+            {% else %}📋{% endif %}
+          </span>
+          <span>{{ tmpl.name }}</span>
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Generated Plan Preview -->
+{% if generated_plan %}
+<div class="plan-preview-card" id="generated-plan-card">
+  <div class="plan-preview-header">
+    <div>
+      <div class="plan-preview-title">{{ generated_plan.name }}</div>
+      {% if generated_plan.description %}
+      <div style="color:var(--text-2);font-size:0.85rem;margin-top:0.25rem;">{{ generated_plan.description }}</div>
+      {% endif %}
+    </div>
+    {% if generated_plan.ai_generated %}
+    <span style="background:rgba(139,92,246,0.2);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);padding:0.3rem 0.8rem;border-radius:999px;font-size:0.75rem;font-weight:700;white-space:nowrap;">🤖 AI</span>
+    {% endif %}
+  </div>
+
+  {% for ex in generated_plan.exercises %}
+  <div class="plan-ex-row">
+    <div>
+      <div class="plan-ex-name">{{ ex.name }}</div>
+      {% if ex.instructions %}
+      <div class="plan-ex-meta">{{ ex.instructions[:80] }}{% if ex.instructions | length > 80 %}...{% endif %}</div>
+      {% endif %}
+    </div>
+    <div style="text-align:right;">
+      <div style="font-weight:700;color:var(--primary-l);">{{ ex.sets }}×{{ ex.reps }}</div>
+      <div class="plan-ex-meta">{{ ex.muscle | replace('_',' ') | title if ex.muscle }}</div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="save-actions">
+    <form method="POST" action="{{ url_for('ai_plan') }}" style="margin:0;display:flex;gap:1rem;flex-wrap:wrap;">
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="plan_json" value='{{ generated_plan | tojson | e }}'>
+      <input type="hidden" name="ai_generated" value="{{ 'true' if generated_plan.ai_generated else 'false' }}">
+      <button type="submit" class="btn btn-primary" id="save-ai-plan-btn">💾 Save Plan & Start Checklist</button>
+    </form>
+    <a href="{{ url_for('ai_plan') }}" class="btn btn-outline" id="regenerate-btn">🔄 Regenerate</a>
+  </div>
+</div>
+{% endif %}
+
+{% if error and not generated_plan %}
+<div class="alert alert-warning" id="ai-error-alert" style="max-width:760px;margin:1.5rem auto 0;">
+  ⚠️ AI error: {{ error }}. Try describing your goal differently or use a template.
+</div>
+{% endif %}
+{% endblock %}

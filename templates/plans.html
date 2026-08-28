@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Workout Plans — Exercise Finder{% endblock %}
+
+{% block extra_head %}
+<style>
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .plan-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1.1rem;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .plan-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+  .plan-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-l));
+  }
+  .plan-card.ai-plan::before {
+    background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  }
+  .plan-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+  .plan-name { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+  .plan-badge {
+    font-size: 0.7rem; font-weight: 700;
+    padding: 0.2rem 0.6rem; border-radius: 999px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .badge-ai { background: rgba(139,92,246,0.2); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+  .badge-manual { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+  .plan-desc { color: var(--text-2); font-size: 0.85rem; }
+  .plan-meta { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .plan-meta-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--text-3); }
+  .plan-actions { display: flex; gap: 0.6rem; margin-top: auto; }
+  .plan-exercise-list { list-style: none; padding: 0; margin: 0; }
+  .plan-exercise-list li {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.3rem 0; font-size: 0.82rem; color: var(--text-2);
+    border-bottom: 1px solid var(--border-l);
+  }
+  .plan-exercise-list li:last-child { border-bottom: none; }
+  .plan-exercise-list li::before { content: '•'; color: var(--primary-l); }
+  .new-plan-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: linear-gradient(135deg, var(--primary), var(--primary-l));
+    color: #fff; font-weight: 700;
+    padding: 0.75rem 1.5rem; border-radius: 0.75rem;
+    text-decoration: none; transition: opacity 0.2s;
+    font-size: 0.95rem;
+  }
+  .new-plan-btn:hover { opacity: 0.88; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>📋 My Workout Plans</h1>
+  <p class="page-sub">Your saved workout routines — click any plan to start your session checklist</p>
+</div>
+
+<div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+  <a href="{{ url_for('ai_plan') }}" class="new-plan-btn" id="ai-plan-btn">🤖 AI Recommendations</a>
+  <a href="{{ url_for('create_plan') }}" class="new-plan-btn" id="create-plan-btn" style="background: linear-gradient(135deg,#0ea5e9,#38bdf8);">➕ Create Manually</a>
+</div>
+
+{% if plans %}
+<div class="plans-grid">
+  {% for plan in plans %}
+  <div class="plan-card {% if plan.ai_generated %}ai-plan{% endif %}" id="plan-card-{{ plan.id }}">
+    <div class="plan-card-header">
+      <div class="plan-name">{{ plan.name }}</div>
+      {% if plan.ai_generated %}
+        <span class="plan-badge badge-ai">🤖 AI</span>
+      {% else %}
+        <span class="plan-badge badge-manual">📝 Manual</span>
+      {% endif %}
+    </div>
+
+    {% if plan.description %}
+    <div class="plan-desc">{{ plan.description }}</div>
+    {% endif %}
+
+    <div class="plan-meta">
+      {% set exercises = plan.exercises if plan.exercises is iterable else [] %}
+      <span class="plan-meta-item">💪 {{ plan.exercises | length }} exercises</span>
+      <span class="plan-meta-item">🗓️ {{ plan.created_at[:10] }}</span>
+      {% set completed = plan.exercises | selectattr('completed', 'equalto', true) | list | length %}
+      {% if completed > 0 %}
+      <span class="plan-meta-item" style="color:var(--success);">✅ {{ completed }} done</span>
+      {% endif %}
+    </div>
+
+    {% if plan.exercises %}
+    <ul class="plan-exercise-list">
+      {% for ex in plan.exercises[:4] %}
+      <li>{{ ex.name }} — {{ ex.sets }}×{{ ex.reps }}</li>
+      {% endfor %}
+      {% if plan.exercises | length > 4 %}
+      <li style="color:var(--text-3);">+{{ (plan.exercises | length) - 4 }} more...</li>
+      {% endif %}
+    </ul>
+    {% endif %}
+
+    <div class="plan-actions">
+      <a href="{{ url_for('view_plan', plan_id=plan.id) }}" class="btn btn-primary btn-sm" id="start-plan-{{ plan.id }}">▶ Start Session</a>
+      <form method="POST" action="{{ url_for('delete_plan', plan_id=plan.id) }}" onsubmit="return confirm('Delete this plan?')" style="margin:0;">
+        <button type="submit" class="btn btn-outline btn-sm" id="delete-plan-{{ plan.id }}">🗑️</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state" id="no-plans-msg" style="margin-top:2rem;">
+  <div class="empty-icon">📋</div>
+  <p>No workout plans yet. Generate one with AI or create your own!</p>
+  <a href="{{ url_for('ai_plan') }}" class="btn btn-primary" style="margin-top:1rem;">Get Started →</a>
+</div>
+{% endif %}
+{% endblock %}
