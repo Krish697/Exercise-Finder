@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Create Workout Plan — Exercise Finder{% endblock %}
+
+{% block extra_head %}
+<style>
+  .create-plan-wrap { max-width: 760px; margin: 0 auto; }
+  .exercise-builder { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
+  .ex-builder-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto auto;
+    gap: 0.6rem; align-items: center;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 0.75rem; padding: 0.75rem 1rem;
+  }
+  @media (max-width: 600px) {
+    .ex-builder-row { grid-template-columns: 1fr; }
+  }
+  .ex-builder-row input, .ex-builder-row select {
+    font-size: 0.85rem; padding: 0.4rem 0.6rem;
+    background: var(--input-bg, rgba(255,255,255,0.05));
+    border: 1px solid var(--border); border-radius: 0.5rem;
+    color: var(--text); width: 100%;
+  }
+  .ex-builder-row input[type="number"] { width: 70px; }
+  .remove-ex-btn {
+    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+    color: #f87171; border-radius: 0.5rem; padding: 0.35rem 0.65rem;
+    cursor: pointer; font-size: 0.8rem; transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .remove-ex-btn:hover { background: rgba(239,68,68,0.2); }
+  .add-ex-btn {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: rgba(99,102,241,0.1); border: 1px dashed rgba(99,102,241,0.4);
+    color: var(--primary-l); border-radius: 0.75rem; padding: 0.7rem 1rem;
+    cursor: pointer; font-size: 0.88rem; font-weight: 600;
+    transition: background 0.2s; width: 100%;
+    justify-content: center;
+  }
+  .add-ex-btn:hover { background: rgba(99,102,241,0.18); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="create-plan-wrap">
+  <div class="page-header">
+    <a href="{{ url_for('plans') }}" style="color:var(--text-3);text-decoration:none;font-size:0.85rem;">← Back to Plans</a>
+    <h1 style="margin-top:0.4rem;">➕ Create Workout Plan</h1>
+    <p class="page-sub">Build a custom workout checklist from scratch</p>
+  </div>
+
+  <form method="POST" action="{{ url_for('create_plan') }}" class="styled-form" id="create-plan-form" onsubmit="submitPlan(event)">
+    <input type="hidden" name="exercises" id="exercises-json" value="[]">
+
+    <div class="card">
+      <h2 class="card-title">Plan Details</h2>
+      <div class="form-group">
+        <label for="plan-name">Plan Name</label>
+        <input type="text" id="plan-name" name="name" placeholder="e.g. My Push Day" required />
+      </div>
+      <div class="form-group">
+        <label for="plan-desc">Description (optional)</label>
+        <input type="text" id="plan-desc" name="description" placeholder="e.g. Chest, shoulders and triceps day" />
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.5rem;">
+      <h2 class="card-title">Exercises</h2>
+      <div class="exercise-builder" id="exercise-builder">
+        <!-- Rows added dynamically -->
+      </div>
+      <button type="button" class="add-ex-btn" id="add-ex-btn" onclick="addExercise()" style="margin-top:0.75rem;">
+        ➕ Add Exercise
+      </button>
+    </div>
+
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:1.5rem;">
+      <button type="submit" class="btn btn-primary" id="save-plan-btn">💾 Save Plan</button>
+      <a href="{{ url_for('plans') }}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  let exercises = [];
+
+  const MUSCLES = ['chest','biceps','triceps','shoulders','middle_back','lower_back',
+    'abdominals','glutes','quadriceps','hamstrings','calves','forearms','lats','traps'];
+
+  function addExercise() {
+    const idx = exercises.length;
+    exercises.push({ name: '', sets: 3, reps: 10, duration: 10, calories: 50, muscle: '', completed: false });
+    renderExercises();
+  }
+
+  function removeExercise(idx) {
+    exercises.splice(idx, 1);
+    renderExercises();
+  }
+
+  function updateField(idx, field, value) {
+    exercises[idx][field] = field === 'sets' || field === 'reps' || field === 'duration' || field === 'calories'
+      ? (parseInt(value) || 0) : value;
+  }
+
+  function renderExercises() {
+    const builder = document.getElementById('exercise-builder');
+    builder.innerHTML = exercises.map((ex, i) => `
+      <div class="ex-builder-row" id="ex-row-${i}">
+        <input type="text" placeholder="Exercise name" value="${ex.name}"
+          oninput="updateField(${i},'name',this.value)" id="ex-name-${i}" />
+        <input type="number" placeholder="Sets" value="${ex.sets}" min="1" max="20"
+          oninput="updateField(${i},'sets',this.value)" id="ex-sets-${i}" title="Sets" />
+        <input type="number" placeholder="Reps" value="${ex.reps}" min="1" max="100"
+          oninput="updateField(${i},'reps',this.value)" id="ex-reps-${i}" title="Reps" />
+        <select onchange="updateField(${i},'muscle',this.value)" id="ex-muscle-${i}" title="Muscle">
+          <option value="">Muscle...</option>
+          ${MUSCLES.map(m => `<option value="${m}" ${ex.muscle===m?'selected':''}>${m.replace('_',' ')}</option>`).join('')}
+        </select>
+        <button type="button" class="remove-ex-btn" onclick="removeExercise(${i})">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function submitPlan(e) {
+    e.preventDefault();
+    // Collect latest values from inputs
+    exercises.forEach((ex, i) => {
+      ex.name = document.getElementById('ex-name-' + i)?.value || ex.name;
+      ex.sets = parseInt(document.getElementById('ex-sets-' + i)?.value) || ex.sets;
+      ex.reps = parseInt(document.getElementById('ex-reps-' + i)?.value) || ex.reps;
+      ex.muscle = document.getElementById('ex-muscle-' + i)?.value || ex.muscle;
+    });
+    document.getElementById('exercises-json').value = JSON.stringify(exercises);
+    e.target.submit();
+  }
+
+  // Start with one empty exercise row
+  addExercise();
+</script>
+{% endblock %}

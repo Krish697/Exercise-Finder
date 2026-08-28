@@ -1,305 +1,241 @@
-import sqlite3
 import os
+from supabase import create_client, Client
+from collections import Counter
 
-if os.environ.get('VERCEL'):
-    DB_PATH = '/tmp/exercise_finder.db'
-else:
-    DB_PATH = os.path.join(os.path.dirname(__file__), 'exercise_finder.db')
+SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
 
+# ── Singleton client (create once, reuse across all requests) ──────────────
+_db_client: Client | None = None
 
-def get_db():
-    """Open a new database connection."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_db() -> Client:
+    """Return a shared Supabase client (singleton for performance)."""
+    global _db_client
+    if _db_client is None:
+        _db_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    return _db_client
 
 
 def init_db():
-    """Create all tables if they don't exist."""
-    conn = get_db()
-    c = conn.cursor()
-
-    c.executescript('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            age INTEGER,
-            height REAL,
-            weight REAL,
-            gender TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            activity TEXT NOT NULL,
-            duration INTEGER NOT NULL,
-            calories INTEGER NOT NULL,
-            sets INTEGER DEFAULT 0,
-            reps INTEGER DEFAULT 0,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS weight_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            weight REAL NOT NULL,
-            logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS goals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            category TEXT NOT NULL,
-            target_value REAL NOT NULL,
-            target_date TEXT NOT NULL,
-            set_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        );
-
-        CREATE TABLE IF NOT EXISTS favourites (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            exercise_name TEXT NOT NULL,
-            exercise_type TEXT,
-            muscle TEXT,
-            difficulty TEXT,
-            instructions TEXT,
-            UNIQUE(user_id, exercise_name),
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        );
-    ''')
-
-    conn.commit()
-    conn.close()
+    """No-op: Tables are managed via supabase_migration.sql in Supabase."""
+    pass
 
 
-# ─── User helpers ───────────────────────────────────────────────────────────
+# ─── User helpers ─────────────────────────────────────────────────────────────
 
 def get_user_by_email(email):
-    conn = get_db()
-    user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-    conn.close()
-    return user
+    db = get_db()
+    result = db.table('users').select('*').eq('email', email).execute()
+    return result.data[0] if result.data else None
 
 
 def get_user_by_id(user_id):
-    conn = get_db()
-    user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
-    conn.close()
-    return user
+    db = get_db()
+    result = db.table('users').select('*').eq('id', user_id).execute()
+    return result.data[0] if result.data else None
 
 
 def create_user(username, email, password_hash):
-    conn = get_db()
-    conn.execute(
-        'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-        (username, email, password_hash)
-    )
-    conn.commit()
-    conn.close()
+    db = get_db()
+    db.table('users').insert({
+        'username': username,
+        'email': email,
+        'password_hash': password_hash
+    }).execute()
 
 
 def delete_user(user_id):
-    """Permanently delete a user and all cascade data."""
-    conn = get_db()
-    conn.execute('DELETE FROM history WHERE user_id=?', (user_id,))
-    conn.execute('DELETE FROM weight_log WHERE user_id=?', (user_id,))
-    conn.execute('DELETE FROM goals WHERE user_id=?', (user_id,))
-    conn.execute('DELETE FROM favourites WHERE user_id=?', (user_id,))
-    conn.execute('DELETE FROM users WHERE id=?', (user_id,))
-    conn.commit()
-    conn.close()
+    """Permanently delete a user — cascade handled by FK ON DELETE CASCADE."""
+    db = get_db()
+    db.table('users').delete().eq('id', user_id).execute()
 
 
 def update_profile(user_id, username, age, height, weight, gender):
-    conn = get_db()
-    old = conn.execute('SELECT weight FROM users WHERE id = ?', (user_id,)).fetchone()
-    conn.execute(
-        'UPDATE users SET username=?, age=?, height=?, weight=?, gender=? WHERE id=?',
-        (username, age, height, weight, gender, user_id)
-    )
+    db = get_db()
+    old = get_user_by_id(user_id)
+    db.table('users').update({
+        'username': username,
+        'age': age,
+        'height': height,
+        'weight': weight,
+        'gender': gender
+    }).eq('id', user_id).execute()
     # Log weight if it changed
-    if old and old['weight'] != weight and weight:
-        conn.execute(
-            'INSERT INTO weight_log (user_id, weight) VALUES (?, ?)',
-            (user_id, weight)
-        )
-    conn.commit()
-    conn.close()
+    if old and old.get('weight') != weight and weight:
+        db.table('weight_log').insert({
+            'user_id': user_id,
+            'weight': weight
+        }).execute()
 
 
-# ─── History helpers ─────────────────────────────────────────────────────────
+# ─── History helpers ──────────────────────────────────────────────────────────
 
 def add_history(user_id, activity, duration, calories, sets=0, reps=0):
-    conn = get_db()
-    conn.execute(
-        'INSERT INTO history (user_id, activity, duration, calories, sets, reps) VALUES (?, ?, ?, ?, ?, ?)',
-        (user_id, activity, duration, calories, sets, reps)
-    )
-    conn.commit()
-    conn.close()
+    db = get_db()
+    db.table('history').insert({
+        'user_id': user_id,
+        'activity': activity,
+        'duration': duration,
+        'calories': calories,
+        'sets': sets,
+        'reps': reps
+    }).execute()
 
 
 def delete_history_item(user_id, item_id):
     """Delete a history entry only if it belongs to the given user."""
-    conn = get_db()
-    conn.execute(
-        'DELETE FROM history WHERE id=? AND user_id=?',
-        (item_id, user_id)
-    )
-    conn.commit()
-    conn.close()
+    db = get_db()
+    db.table('history').delete().eq('id', item_id).eq('user_id', user_id).execute()
 
 
 def get_history(user_id, query=None):
-    conn = get_db()
+    db = get_db()
+    q = db.table('history').select('*').eq('user_id', user_id)
     if query:
-        rows = conn.execute(
-            'SELECT * FROM history WHERE user_id=? AND activity LIKE ? ORDER BY timestamp DESC',
-            (user_id, f'%{query}%')
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            'SELECT * FROM history WHERE user_id=? ORDER BY timestamp DESC',
-            (user_id,)
-        ).fetchall()
-    conn.close()
-    return rows
+        q = q.ilike('activity', f'%{query}%')
+    result = q.order('timestamp', desc=True).execute()
+    return result.data
 
 
 def get_progress_stats(user_id):
-    conn = get_db()
-    total_workouts = conn.execute(
-        'SELECT COUNT(*) as cnt FROM history WHERE user_id=?', (user_id,)
-    ).fetchone()['cnt']
-
-    total_minutes = conn.execute(
-        'SELECT SUM(duration) as s FROM history WHERE user_id=?', (user_id,)
-    ).fetchone()['s'] or 0
-
-    total_calories = conn.execute(
-        'SELECT SUM(calories) as s FROM history WHERE user_id=?', (user_id,)
-    ).fetchone()['s'] or 0
-
-    most_common = conn.execute(
-        'SELECT activity, COUNT(*) as cnt FROM history WHERE user_id=? GROUP BY activity ORDER BY cnt DESC LIMIT 1',
-        (user_id,)
-    ).fetchone()
-
-    conn.close()
+    db = get_db()
+    history = db.table('history').select('activity,duration,calories').eq('user_id', user_id).execute().data
+    total_workouts = len(history)
+    total_minutes = sum(h.get('duration', 0) or 0 for h in history)
+    total_calories = sum(h.get('calories', 0) or 0 for h in history)
+    activities = [h['activity'] for h in history]
+    most_common = Counter(activities).most_common(1)[0][0] if activities else 'N/A'
     return {
         'total_workouts': total_workouts,
         'total_minutes': total_minutes,
         'total_calories': total_calories,
-        'most_common': most_common['activity'] if most_common else 'N/A'
+        'most_common': most_common
     }
 
 
-# ─── Weight log helpers ──────────────────────────────────────────────────────
+# ─── Weight log helpers ───────────────────────────────────────────────────────
 
 def get_weight_log(user_id):
-    conn = get_db()
-    rows = conn.execute(
-        'SELECT weight, logged_at FROM weight_log WHERE user_id=? ORDER BY logged_at ASC',
-        (user_id,)
-    ).fetchall()
-    conn.close()
-    return rows
+    db = get_db()
+    result = db.table('weight_log').select('weight,logged_at').eq('user_id', user_id).order('logged_at').execute()
+    return result.data
 
 
-# ─── Goals helpers ───────────────────────────────────────────────────────────
+# ─── Goals helpers ────────────────────────────────────────────────────────────
 
 def add_goal(user_id, category, target_value, target_date):
-    conn = get_db()
-    conn.execute(
-        'INSERT INTO goals (user_id, category, target_value, target_date) VALUES (?, ?, ?, ?)',
-        (user_id, category, target_value, target_date)
-    )
-    conn.commit()
-    conn.close()
+    db = get_db()
+    db.table('goals').insert({
+        'user_id': user_id,
+        'category': category,
+        'target_value': target_value,
+        'target_date': target_date
+    }).execute()
 
 
 def delete_goal(user_id, goal_id):
     """Delete a goal only if it belongs to the given user."""
-    conn = get_db()
-    conn.execute(
-        'DELETE FROM goals WHERE id=? AND user_id=?',
-        (goal_id, user_id)
-    )
-    conn.commit()
-    conn.close()
+    db = get_db()
+    db.table('goals').delete().eq('id', goal_id).eq('user_id', user_id).execute()
 
 
 def get_goals(user_id):
-    conn = get_db()
-    rows = conn.execute(
-        'SELECT * FROM goals WHERE user_id=? ORDER BY set_at DESC',
-        (user_id,)
-    ).fetchall()
-    conn.close()
-    return rows
+    db = get_db()
+    result = db.table('goals').select('*').eq('user_id', user_id).order('set_at', desc=True).execute()
+    return result.data
 
 
 def get_recent_goal(user_id):
     """Return the most recently set goal."""
-    conn = get_db()
-    row = conn.execute(
-        'SELECT * FROM goals WHERE user_id=? ORDER BY set_at DESC LIMIT 1',
-        (user_id,)
-    ).fetchone()
-    conn.close()
-    return row
+    db = get_db()
+    result = db.table('goals').select('*').eq('user_id', user_id).order('set_at', desc=True).limit(1).execute()
+    return result.data[0] if result.data else None
 
 
-# ─── Favourites helpers ──────────────────────────────────────────────────────
+# ─── Favourites helpers ───────────────────────────────────────────────────────
 
 def add_favourite(user_id, exercise_name, exercise_type, muscle, difficulty, instructions):
-    conn = get_db()
+    db = get_db()
     try:
-        conn.execute(
-            '''INSERT OR IGNORE INTO favourites
-               (user_id, exercise_name, exercise_type, muscle, difficulty, instructions)
-               VALUES (?, ?, ?, ?, ?, ?)''',
-            (user_id, exercise_name, exercise_type, muscle, difficulty, instructions)
-        )
-        conn.commit()
-        added = conn.execute('SELECT changes() as c').fetchone()['c']
+        existing = db.table('favourites').select('id').eq('user_id', user_id).eq('exercise_name', exercise_name).execute()
+        if existing.data:
+            return False
+        db.table('favourites').insert({
+            'user_id': user_id,
+            'exercise_name': exercise_name,
+            'exercise_type': exercise_type,
+            'muscle': muscle,
+            'difficulty': difficulty,
+            'instructions': instructions
+        }).execute()
+        return True
     except Exception:
-        added = 0
-    conn.close()
-    return added > 0
+        return False
 
 
 def remove_favourite(user_id, exercise_name):
-    conn = get_db()
-    conn.execute(
-        'DELETE FROM favourites WHERE user_id=? AND exercise_name=?',
-        (user_id, exercise_name)
-    )
-    conn.commit()
-    conn.close()
+    db = get_db()
+    db.table('favourites').delete().eq('user_id', user_id).eq('exercise_name', exercise_name).execute()
 
 
 def get_favourites(user_id):
-    conn = get_db()
-    rows = conn.execute(
-        'SELECT * FROM favourites WHERE user_id=? ORDER BY id DESC',
-        (user_id,)
-    ).fetchall()
-    conn.close()
-    return rows
+    db = get_db()
+    result = db.table('favourites').select('*').eq('user_id', user_id).order('id', desc=True).execute()
+    return result.data
 
 
 def is_favourite(user_id, exercise_name):
-    conn = get_db()
-    row = conn.execute(
-        'SELECT id FROM favourites WHERE user_id=? AND exercise_name=?',
-        (user_id, exercise_name)
-    ).fetchone()
-    conn.close()
-    return row is not None
+    db = get_db()
+    result = db.table('favourites').select('id').eq('user_id', user_id).eq('exercise_name', exercise_name).execute()
+    return len(result.data) > 0
+
+
+# ─── Workout Plans helpers (NEW) ──────────────────────────────────────────────
+
+def add_workout_plan(user_id, name, description, exercises, ai_generated=False):
+    """Save a workout plan (AI or manual) as a JSON array of exercises."""
+    db = get_db()
+    result = db.table('workout_plans').insert({
+        'user_id': user_id,
+        'name': name,
+        'description': description,
+        'exercises': exercises,
+        'ai_generated': ai_generated
+    }).execute()
+    return result.data[0] if result.data else None
+
+
+def get_workout_plans(user_id):
+    db = get_db()
+    result = db.table('workout_plans').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+    return result.data
+
+
+def get_workout_plan(plan_id, user_id):
+    db = get_db()
+    result = db.table('workout_plans').select('*').eq('id', plan_id).eq('user_id', user_id).execute()
+    return result.data[0] if result.data else None
+
+
+def delete_workout_plan(plan_id, user_id):
+    db = get_db()
+    db.table('workout_plans').delete().eq('id', plan_id).eq('user_id', user_id).execute()
+
+
+def update_workout_plan_exercises(plan_id, user_id, exercises):
+    """Persist updated checklist state (checked/unchecked exercises)."""
+    db = get_db()
+    db.table('workout_plans').update({'exercises': exercises}).eq('id', plan_id).eq('user_id', user_id).execute()
+
+
+# ─── Admin helpers ────────────────────────────────────────────────────────────
+
+def get_all_table_data():
+    """Fetch all rows from every table for the admin dashboard."""
+    db = get_db()
+    tables = ['users', 'history', 'weight_log', 'goals', 'favourites', 'workout_plans']
+    data = {}
+    for t in tables:
+        result = db.table(t).select('*').execute()
+        data[t] = result.data
+    return data

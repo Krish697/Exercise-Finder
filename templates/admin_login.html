@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Admin Login — Exercise Finder{% endblock %}
+
+{% block content %}
+<style>
+  .admin-login-wrap {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .admin-login-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 3rem 2.5rem;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+  }
+  .admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    margin-bottom: 1.5rem;
+  }
+  .admin-login-card h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  .admin-login-card p {
+    color: var(--text-2);
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+</style>
+
+<div class="admin-login-wrap">
+  <div class="admin-login-card">
+    <div class="admin-badge">🔐 Admin Area</div>
+    <h1>Admin Login</h1>
+    <p>Sign in with your administrator credentials.</p>
+
+    <form method="POST" action="{{ url_for('admin_login') }}" class="styled-form" id="admin-login-form">
+      <div class="form-group">
+        <label for="admin-email">Admin Email</label>
+        <input type="email" id="admin-email" name="email" placeholder="admin@example.com" required autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="admin-pass">Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="admin-pass" name="password" placeholder="••••••••" required autocomplete="current-password" />
+          <button type="button" class="pw-toggle" id="admin-pw-btn" onclick="togglePw('admin-pass','admin-pw-btn')" title="Show password">👁️</button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="admin-login-btn" style="width:100%; margin-top:0.5rem;">
+        Sign In to Admin
+      </button>
+    </form>
+
+    <div style="text-align:center; margin-top:1.5rem;">
+      <a href="{{ url_for('index') }}" style="color:var(--text-3); font-size:0.85rem; text-decoration:none;">← Back to App</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
